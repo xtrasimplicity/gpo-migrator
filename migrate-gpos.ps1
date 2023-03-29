@@ -1,3 +1,5 @@
+param ($Action, $Name)
+
 # This script requires that the GPMC module is installed.
 # You can install this using `Install-WindowsFeature GPMC`
 
@@ -12,6 +14,10 @@ function Backup-GPOs-From-Domain() {
   $gpos = Get-GPO -All -Domain $domain
 
   foreach($gpo in $gpos) {
+    if ($Name -and ($gpo.DisplayName -ne $Name)) {
+     continue
+    }
+
     $guid = $gpo.Id;
     $displayName = $gpo.DisplayName;
 
@@ -30,14 +36,18 @@ function Import-GPOs-To-Domain() {
  $GUIDToNameMap = Import-CSV -Path $mappingCSVFile
 
  foreach($mapping in $GUIDToNameMap) {
+   if ($Name -and ($mapping.OldName -ne $Name)) {
+    continue
+   }
+ 
    Write-Host "Importing '$($mapping.NewName)'..."
    Import-GPO -BackupGpoName "$($mapping.OldName)" -TargetName "$($mapping.NewName)" -Path $targetPath -CreateIfNeeded
  }
 }
 
-$action = $args[0]
-switch($action) {
+
+switch($Action) {
   "Import" { Import-GPOs-To-Domain; Break; }
   "Backup" { Backup-GPOs-From-Domain; Break; }
-  Default { Write-Host "Invalid action. Please specify either 'Import' or 'Backup' as the first parameter." }
+  Default { Write-Host "Invalid action. Please specify either 'Import' or 'Backup' as the first parameter (or using -Action)." }
 }
